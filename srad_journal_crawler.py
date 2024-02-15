@@ -1,7 +1,9 @@
 # 
 #  srad_journal_crawler.py
-#    getting srad.jp journal content
-#    2024-2-8 by espy (3615)
+#    getting srad.jp journal content of 3615 (espy)
+#  
+#  2024-2-15  ver 0.2  correct: it dosen't download latest 10 journal
+#  
 #  
 
 import requests
@@ -26,7 +28,7 @@ def get_content(url):
 def get_content_omitjs(url):
   content = get_content(url)
   content = content.replace('<script', '<!-- <script')
-  content = content.replace('</script>', '</script> -->')
+  content = content.replace('</script>', '</script -->')
   return content
 
 def get_and_save(url, fname, omitjs):
@@ -38,6 +40,19 @@ def get_and_save(url, fname, omitjs):
   with open(fname, "w+", encoding='utf-8') as f:
     f.write(content)
   return content
+
+# return journal id numbers as list
+def search_jnl_num(idx_content, handle_name):
+  ret_no_list = []
+  pattern = r"{}/journal/(\d+)".format(handle_name)
+  for a_line in (idx_content.split("\n")):
+    match = re.search(pattern, a_line)
+    if match:
+      jnl_id = match.group(1)
+      #print(jnl_id)   #DEBUG
+      ret_no_list.append(jnl_id)
+  return ret_no_list
+
 
 
 #------ main
@@ -100,53 +115,89 @@ else:
 #print(url_getidx_0)     #DEBUG
 #print(url_getidx_head)     #DEBUG
 
-save_file_path = save_folder + '/' + 'idx_' + id + '-0.html'
-print('joural の index (start=0)を取得中')
-get_and_save(url_getidx_0, save_file_path, True)
+fname_jnl_no_list = save_folder + '/jnl_no_list.txt'  
+
 
 # ----- get index of journals
 jnl_no_list = []
-num = 10
-fetch_flag = True
-while fetch_flag:   #DEBUG  and (num <= 50):
-  print('journal index (start={})を取得中'.format(num))
-  url = url_getidx_head + str(num)
-  save_file_path = save_folder + '/' + 'idx_' + id + '-' + str(num) + '.html'
-  content = get_and_save(url, save_file_path, True)
-  # pick up the id_number of each journal
-  pattern = r"{}/journal/(\d+)".format(handle_name)
-  for a_line in (content.split("\n")):
-    match = re.search(pattern, a_line)
-    if match:
-      jnl_id = match.group(1)
-      #print(jnl_id)   #DEBUG
-      jnl_no_list.append(jnl_id)
 
-  if '次の 10 件の' in content:
-    num += 10
-    # time.sleep(1)
-  else:
-    print('最後の index を取得しました。')
-    fetch_flag = False
+if not os.path.exists(fname_jnl_no_list):
+  #----- index, start=0
+  save_file_path = save_folder + '/' + 'idx_' + id + '-0.html'
+  print('joural の index (start=0)を取得中')
+  content = get_and_save(url_getidx_0, save_file_path, True)
+  num_list_part = search_jnl_num(content, handle_name)
+  jnl_no_list = jnl_no_list + num_list_part
 
-# print(jnl_no_list)    #DEBUG
-print(handle_name, ' さんの日記エントリは ', len(jnl_no_list), ' 件でした。', sep="")
+  #----- index, start=10 and following all
+  # ----- get index of journals
+  num = 10
+  fetch_flag = True
+  while fetch_flag:   #DEBUG  and (num <= 50):
+    print('journal index (start={})を取得中'.format(num))
+    url = url_getidx_head + str(num)
+    save_file_path = save_folder + '/' + 'idx_' + id + '-' + str(num) + '.html'
+    content = get_and_save(url, save_file_path, True)
+    # pick up the id_number of each journal
+    num_list_part = search_jnl_num(content, handle_name)
+    jnl_no_list = jnl_no_list + num_list_part
 
-# number list output to file
-fname = save_folder + '/jnl_no_list.txt'  
-jnl_no_list.reverse()
-with open(fname, "w+", encoding='utf-8') as f:
-  for item in jnl_no_list:
-    f.write(item + '\n')
+    if '次の 10 件の' in content:
+      num += 10
+      # time.sleep(1)
+    else:
+      print('最後の index を取得しました。')
+      fetch_flag = False
+
+  # print(jnl_no_list)    #DEBUG
+  jnl_count_all = len(jnl_no_list)
+  print(handle_name, ' さんの日記エントリは ', jnl_count_all, ' 件でした。', sep="")
+
+  # number list output to file
+
+  jnl_no_list.reverse()
+  with open(fname_jnl_no_list, "w+", encoding='utf-8') as f:
+    for item in jnl_no_list:
+      f.write(item + '\n')
+
+else:
+  print('ファイル: ', fname_jnl_no_list, ' は既に存在しますので、index取得はスキップします。', sep="")
+
+  with open(fname_jnl_no_list, "r") as f:
+    jnl_no_list = (f.read()).splitlines()
+  jnl_count_all = len(jnl_no_list)
+  # print(jnl_no_list)    #DEBUG
+
+
+
 
 # ----- get each journal
 n = 0
 for j_no in jnl_no_list:
   url_jnl = url_jnl_head + j_no
   n += 1
-  print('(', n, ') ', url_jnl, ' を取得中', sep="")
-  save_file_path = save_folder + '/' + 'jnl_' + id + '-' + j_no + '.html'
-  content = get_and_save(url_jnl, save_file_path, True)
-  time.sleep(1)
+  print('(', n, '/', jnl_count_all, ') ', url_jnl, ' ', sep="", end="")
+
+  fname = 'jnl_' + id + '-' + j_no + '.html'
+  save_file_path = save_folder + '/' + fname
+
+  # ダウンロード済みであるか、ファイルを確認する
+  get_cont_flag = True
+  ldir = os.listdir(save_folder + '/')
+  #print(ldir)  #DEBUG
+  if fname in ldir:
+    print('already exitst...', end="")
+    filesize = os.path.getsize(save_file_path)
+    print(' file size of', fname,'is ',filesize , end="")
+    if filesize > 20000:
+      get_cont_flag = False
+      print(' skip')
+    else:
+      print(' need to re-download')
+  
+  if get_cont_flag:
+    print(' 取得中', sep="")
+    content = get_and_save(url_jnl, save_file_path, True)
+    time.sleep(1)
 
 print('完了しました。')

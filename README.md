@@ -9,6 +9,6 @@ Download srad.jp user's all journal (Nikki) into local folder.
  First, program downloads journal's index, and the next dowloads each contents of the journal.
  The file type is *.html, that is be browsable with web browser.
  
- (2024-2-15)最新の10件をダウンロードできないバグあり。
+ (2024-2-15) ver 0.2 : 最新の10件をダウンロードできないバグを修正。
  
  

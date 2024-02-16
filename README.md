@@ -10,5 +10,7 @@ Download srad.jp user's all journal (Nikki) into local folder.
  The file type is *.html, that is be browsable with web browser.
  
  (2024-2-15) ver 0.2 : 最新の10件をダウンロードできないバグを修正。
+
+ (2024-2-16) make_journal_index.py を追加。ダウンロードが完了したフォルダ内のファイルをサーチして 各日記記事への index_local.htmlを作成します。
  
  

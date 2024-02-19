@@ -1,10 +1,12 @@
 # 
 #  srad_journal_crawler.py
-#    getting srad.jp journal content of 3615 (espy)
+#    getting srad.jp journal content 
+#  
 #  
 #  2024-2-15  ver 0.2  correct: it dosen't download latest 10 journal
+#  2024-2-20  ver 0.3  add function to download 'friends' page.
 #  
-#  
+#  2024 by espy(3615)
 
 import requests
 import sys
@@ -199,5 +201,18 @@ for j_no in jnl_no_list:
     print(' 取得中', sep="")
     content = get_and_save(url_jnl, save_file_path, True)
     time.sleep(1)
+
+
+# ----- get friends page
+fname_friends = 'friends.html'
+fname_friends_path = save_folder + '/' + fname_friends
+ldir = os.listdir(save_folder + '/')
+if fname_friends in ldir:
+  print('(friendsページはダウンロード済み)')
+else:
+  url = url_head_1 + handle_name + '/friends'
+  print('friendsページをダウンロード中...', end="", flush=True)
+  get_and_save(url, fname_friends_path, True)
+  print('保存しました。')
 
 print('完了しました。')
